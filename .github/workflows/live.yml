@@ -2,6 +2,12 @@ name: YouTube Live Stream
 
 on:
   workflow_dispatch:
+    inputs:
+      gdrive_id:
+        description: 'Google Drive File ID (ভিডিওর আইডি এখানে দিন)'
+        required: true
+        default: 'আপনার_ভিডিওর_আইডি_এখানে_দিন'
+        type: string
 
 jobs:
   stream:
@@ -18,10 +24,9 @@ jobs:
 
       - name: Download Video from Google Drive
         run: |
-          # এখানে আপনার গুগল ড্রাইভের ডাইরেক্ট লিংকটি বসাবেন
-          GDRIVE_URL="https://drive.google.com/uc?export=download&id=YOUR_FILE_ID"
+          # এখানে আপনি ইনপুটে যে আইডি দিবেন, তা স্বয়ংক্রিয়ভাবে বসে যাবে
+          GDRIVE_URL="https://drive.google.com/uc?export=download&id=${{ github.event.inputs.gdrive_id }}"
           
-          # ভিডিওটি ডাউনলোড হয়ে 'video.mp4' নামে সেভ হবে
           curl -L -c /tmp/cookies "$GDRIVE_URL" > video.mp4
 
       - name: Start Live Stream
