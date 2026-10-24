@@ -1,9 +1,33 @@
-- name: Start Live Stream
-        env:
-          STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
+name: YouTube Live Stream
+
+on:
+  workflow_dispatch:
+    inputs:
+      gdrive_url:
+        description: 'Google Drive Video Link (পুরো লিংক এখানে পেস্ট করুন)'
+        required: true
+        default: 'https://drive.google.com/file/d/YOUR_FILE_ID/view?usp=sharing'
+        type: string
+
+jobs:
+  stream:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install FFmpeg
         run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Download Video from Google Drive
+        run: |
+          # ব্যবহারকারী পুরো লিংক দিলেও স্ক্রিপ্ট নিজে থেকেই File ID আলাদা করে ডাউনলোড করে নেবে
           FULL_URL="${{ github.event.inputs.gdrive_url }}"
           
+          # লিংকের মাঝখান থেকে ID বের করার টেকনিক
           if [[ "$FULL_URL" =~ /d/([a-zA-Z0-9_-]+) ]]; then
             FILE_ID="${BASH_REMATCH[1]}"
           elif [[ "$FULL_URL" =~ id=([a-zA-Z0-9_-]+) ]]; then
@@ -13,26 +37,14 @@
             exit 1
           fi
           
+          echo "Extracted File ID: $FILE_ID"
+          
+          # ফাইল ডাউনলোড করা
           DOWNLOAD_URL="https://drive.google.com/uc?export=download&id=$FILE_ID"
           curl -L -c /tmp/cookies "$DOWNLOAD_URL" > video.mp4
 
-          echo "=========================================="
-          echo " লাইভ স্ট্রিমিং সফলভাবে শুরু হচ্ছে..."
-          echo " স্টার্ট টাইম: $(date)"
-          echo "=========================================="
-
-          # FFmpeg ব্যাকগ্রাউন্ডে রান করা এবং সময় ট্র্যাক করা
-          START_TIME=$(date +%s)
-          
-          ffmpeg -re -stream_loop -1 -i "video.mp4" -c:v libx264 -preset veryfast -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -g 50 -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY" &
-          
-          FFMPEG_PID=$!
-          
-          # লুপ চালিয়ে চেক করা লাইভ কত মিনিট হলো
-          while kill -0 $FFMPEG_PID 2>/dev/null; do
-            CURRENT_TIME=$(date +%s)
-            ELAPSED_SEC=$((CURRENT_TIME - START_TIME))
-            ELAPSED_MIN=$((ELAPSED_SEC / 60))
-            echo " [স্ট্যাটাস] লাইভ চলছে... মোট সময় অতিবাহিত হয়েছে: $ELAPSED_MIN মিনিট ($ELAPSED_SEC সেকেন্ড)"
-            sleep 60 # প্রতি ১ মিনিট পর পর আপডেট দেখাবে
-          done
+      - name: Start Live Stream
+        env:
+          STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
+        run: |
+          ffmpeg -re -stream_loop -1 -i "video.mp4" -c:v libx264 -preset veryfast -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -g 50 -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
