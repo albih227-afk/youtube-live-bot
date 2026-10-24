@@ -1,4 +1,4 @@
-name: YouTube Live Stream
+name: News Onirban Live Stream
 
 on:
   workflow_dispatch:
