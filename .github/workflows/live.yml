@@ -1,7 +1,7 @@
 name: YouTube Live Stream
 
 on:
-  workflow_dispatch: # ম্যানুয়ালি লাইভ শুরু করার জন্য
+  workflow_dispatch:
 
 jobs:
   stream:
@@ -16,10 +16,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
+      - name: Download Video from Google Drive
+        run: |
+          # এখানে আপনার গুগল ড্রাইভের ডাইরেক্ট লিংকটি বসাবেন
+          GDRIVE_URL="https://drive.google.com/uc?export=download&id=YOUR_FILE_ID"
+          
+          # ভিডিওটি ডাউনলোড হয়ে 'video.mp4' নামে সেভ হবে
+          curl -L -c /tmp/cookies "$GDRIVE_URL" > video.mp4
+
       - name: Start Live Stream
         env:
           STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
         run: |
-          # ভিডিওটি অনলাইন থেকে ডাউনলোড করে সরাসরি লাইভ করা অথবা লোকাল ফাইল ব্যবহার
-          # এখানে উদাহরণস্বরূপ 'video.mp4' ফাইল লুপ করে চালানো হচ্ছে:
           ffmpeg -re -stream_loop -1 -i "video.mp4" -c:v libx264 -preset veryfast -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -g 50 -c:a aac -b:a 128k -ar 44100 -f flv "rtmp://a.rtmp.youtube.com/live2/$STREAM_KEY"
